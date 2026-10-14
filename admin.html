@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản Trị Món Ăn | Bếp Nhà Làm</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="admin.css">
+
+  <!-- Firebase SDK (v10 Compat CDN để chạy trực tiếp không cần build) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+
+  <!-- Cấu hình Firebase & Whitelist Email -->
+  <script src="firebase-config.js"></script>
+</head>
+<body>
+
+  <!-- ==========================================
+       1. MÀN HÌNH ĐĂNG NHẬP (GOOGLE SIGN-IN)
+       ========================================== -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-card">
+      <div class="login-brand">
+        <div class="brand-icon">
+          <i class="fa-solid fa-mortar-pestle"></i>
+        </div>
+        <div>
+          <div class="brand-title">Bếp Nhà Làm</div>
+          <div class="brand-subtitle">Cổng Quản Trị Hệ Thống</div>
+        </div>
+      </div>
+
+      <p class="login-desc">
+        Đăng nhập bằng tài khoản Google quản trị viên để cập nhật danh sách món, đổi giá bán và theo dõi trạng thái còn hàng.
+      </p>
+
+      <!-- Nút Đăng nhập Google -->
+      <button id="btn-google-login" class="btn-google-login">
+        <svg viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        <span>Đăng nhập với Google</span>
+      </button>
+
+      <!-- Cảnh báo bảo mật -->
+      <div class="login-security-notice">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>Hệ thống áp dụng <strong>Whitelist Email</strong>. Chỉ những tài khoản Google đã được cấp quyền quản trị mới có thể đăng nhập.</span>
+      </div>
+
+      <!-- Trợ giúp khi chưa tạo Firebase -->
+      <div class="login-demo-notice">
+        <button id="btn-enter-demo" class="btn-demo-mode">
+          <i class="fa-solid fa-play"></i> Xem thử giao diện Dashboard (Chế độ Demo cục bộ)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       2. MÀN HÌNH DASHBOARD QUẢN TRỊ
+       ========================================== -->
+  <div id="dashboard-screen" class="dashboard-screen" style="display: none;">
+    
+    <!-- Navbar -->
+    <header class="admin-navbar">
+      <div class="nav-left">
+        <a href="admin.html" class="nav-logo">
+          <div class="nav-logo-badge">
+            <i class="fa-solid fa-mortar-pestle"></i>
+          </div>
+          <span class="nav-logo-text">Bếp Nhà Làm</span>
+        </a>
+        <span class="nav-tag">Admin Dashboard</span>
+      </div>
+
+      <div class="nav-right">
+        <!-- Badge Cảnh Báo Khi Đang Bật Bảo Trì -->
+        <div id="admin-maintenance-badge" class="admin-maintenance-badge" style="display: none;" title="Website đang tắt với khách! Bấm để vào Cài đặt đổi lại">
+          <span class="pulse-dot"></span>
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span>WEBSITE ĐANG BẢO TRÌ</span>
+        </div>
+
+        <a href="index.html" target="_blank" class="btn-view-site">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i>
+          <span>Xem Trang Khách</span>
+        </a>
+
+        <div class="user-profile">
+          <img id="user-avatar" class="user-avatar" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%232d6a4f'/><text x='50%' y='55%' text-anchor='middle' fill='white' font-size='40' font-family='sans-serif'>A</text></svg>" alt="Admin Avatar">
+          <div class="user-info">
+            <span id="user-name" class="user-name">Quản Trị Viên</span>
+            <span id="user-email" class="user-email">admin@bepnhalam.vn</span>
+          </div>
+          <button id="btn-logout" class="btn-logout" title="Đăng xuất">
+            <i class="fa-solid fa-right-from-bracket"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="dashboard-content">
+
+      <!-- Trạng thái kết nối Firebase -->
+      <div id="firebase-status-banner" class="status-banner">
+        <div>
+          <i class="fa-solid fa-circle-info"></i>
+          <span id="status-text">Đang chạy ở <strong>Chế độ Demo (Dữ liệu cục bộ)</strong>. Bạn chưa cấu hình Firebase. Khi tạo xong project, hãy dán config vào file <code>firebase-config.js</code> để đồng bộ thời gian thực!</span>
+        </div>
+      </div>
+
+      <!-- Thống kê nhanh -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-info">
+            <span>Tổng Số Món Ăn</span>
+            <h3 id="stat-total-items">0</h3>
+          </div>
+          <div class="stat-icon green">
+            <i class="fa-solid fa-bowl-rice"></i>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-info">
+            <span>Đang Mở Bán (Còn Hàng)</span>
+            <h3 id="stat-instock-items">0</h3>
+          </div>
+          <div class="stat-icon blue">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-info">
+            <span>Tạm Hết Hàng</span>
+            <h3 id="stat-outstock-items">0</h3>
+          </div>
+          <div class="stat-icon orange">
+            <i class="fa-solid fa-ban"></i>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-info">
+            <span>Số Danh Mục</span>
+            <h3 id="stat-categories">4</h3>
+          </div>
+          <div class="stat-icon red">
+            <i class="fa-solid fa-layer-group"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Thanh công cụ lọc & thao tác -->
+      <div class="action-bar">
+        <div class="search-filters">
+          <div class="search-input-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="admin-search-input" class="search-input" placeholder="Tìm tên món, mã món...">
+          </div>
+
+          <select id="admin-category-filter" class="filter-select">
+            <option value="all">Tất cả danh mục</option>
+            <option value="gio">Giò Truyền Thống</option>
+            <option value="cha">Chả Chiên / Hấp</option>
+            <option value="xucxich">Xúc Xích & Lạp Xưởng</option>
+            <option value="thit">Thịt Lợn Tươi Sạch</option>
+          </select>
+
+          <select id="admin-stock-filter" class="filter-select">
+            <option value="all">Tất cả trạng thái</option>
+            <option value="active">Đang hiển thị trên web</option>
+            <option value="hidden">Đang tạm ẩn món</option>
+            <option value="instock">Còn hàng</option>
+            <option value="outstock">Tạm hết hàng</option>
+          </select>
+        </div>
+
+        <div class="action-buttons">
+          <button id="btn-open-shop-settings" class="btn-secondary" title="Cài đặt thông tin liên hệ, hotline, địa chỉ">
+            <i class="fa-solid fa-gear"></i>
+            <span>Cài Đặt Shop</span>
+          </button>
+          <button id="btn-add-product" class="btn-primary">
+            <i class="fa-solid fa-plus"></i>
+            <span>Thêm Món Mới</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Bảng danh sách sản phẩm -->
+      <div class="table-card">
+        <table class="products-table">
+          <thead>
+            <tr>
+              <th style="width: 320px;">Món Ăn</th>
+              <th>Danh Mục</th>
+              <th>Giá Bán Lẻ</th>
+              <th>Giá Sỉ (Từ 10kg)</th>
+              <th style="text-align: center;">Trạng Thái Kho</th>
+              <th style="text-align: right; width: 140px;">Thao Tác</th>
+            </tr>
+          </thead>
+          <tbody id="admin-products-tbody">
+            <!-- Render động bằng JS -->
+          </tbody>
+        </table>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ==========================================
+       3. MODAL THÊM / SỬA MÓN ĂN
+       ========================================== -->
+  <div id="product-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-title" class="modal-title">Thêm Món Ăn Mới</h3>
+        <button id="btn-close-product-modal" class="btn-close-modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="product-form" class="modal-body">
+        <input type="hidden" id="form-item-id">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="form-name">Tên món ăn <span class="req">*</span></label>
+            <input type="text" id="form-name" class="form-control" placeholder="VD: Giò Lụa Nạc Gia Truyền" required>
+          </div>
+
+          <div class="form-group">
+            <label for="form-category">Danh mục <span class="req">*</span></label>
+            <select id="form-category" class="form-control" required>
+              <option value="gio">Giò Truyền Thống</option>
+              <option value="cha">Chả Chiên / Hấp</option>
+              <option value="xucxich">Xúc Xích & Lạp Xưởng</option>
+              <option value="thit">Thịt Lợn Tươi Sạch</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="form-price">Giá bán lẻ (VNĐ) <span style="font-size: 11.5px; font-weight: normal; color: var(--gray-500);">(Để trống = Hiện 'Liên hệ')</span></label>
+            <input type="number" id="form-price" class="form-control" placeholder="190000 (hoặc để trống)" min="0" step="1000">
+          </div>
+
+          <div class="form-group">
+            <label for="form-wholesale-price">Giá sỉ đại lý (VNĐ) <span style="font-size: 11.5px; font-weight: normal; color: var(--gray-500);">(Tùy chọn)</span></label>
+            <input type="number" id="form-wholesale-price" class="form-control" placeholder="165000" min="0" step="1000">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="form-unit">Đơn vị tính</label>
+            <input type="text" id="form-unit" class="form-control" placeholder="kg, gói, cây..." value="kg">
+          </div>
+
+          <div class="form-group">
+            <label for="form-tag">Nhãn nổi bật (Badge)</label>
+            <input type="text" id="form-tag" class="form-control" placeholder="VD: Bán Chạy Nhất, Gia Truyền...">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Hình ảnh món ăn</label>
+          <div class="image-upload-box" id="upload-box-trigger">
+            <i class="fa-solid fa-cloud-arrow-up" style="font-size: 24px; color: var(--primary); margin-bottom: 6px;"></i>
+            <p style="font-size: 13px; font-weight: 600;">Bấm để chọn ảnh từ máy tính / điện thoại</p>
+            <span style="font-size: 11.5px; color: var(--gray-500);">Hỗ trợ JPG, PNG, WEBP (Tự động nén tối ưu)</span>
+            <input type="file" id="form-image-file" accept="image/*" style="display: none;">
+          </div>
+
+          <div style="text-align: center; font-size: 11px; color: var(--gray-400); margin: 6px 0;">- HOẶC DÁN ĐƯỜNG DẪN ẢNH -</div>
+
+          <input type="text" id="form-image-url" class="form-control" placeholder="VD: assets/images/gio_lua.jpg hoặc https://...">
+
+          <div id="image-preview-container" class="image-preview-wrap" style="display: none;">
+            <img id="form-image-preview" class="image-preview-thumb" src="" alt="Preview">
+            <div class="image-preview-details">
+              <strong>Xem trước ảnh sản phẩm</strong>
+              <div id="form-image-status" style="color: var(--success); font-size: 11.5px; margin-top: 2px;">Ảnh đã sẵn sàng</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="form-desc">Mô tả món ăn</label>
+          <textarea id="form-desc" class="form-control" placeholder="Mô tả nguyên liệu, hương vị đặc trưng của món..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="form-specs">Điểm nổi bật (Cách nhau bằng dấu phẩy)</label>
+          <input type="text" id="form-specs" class="form-control" placeholder="Thịt nóng 5h sáng, Gói lá chuối xanh, Không hàn the">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="form-stock">Trạng thái kho hàng</label>
+            <select id="form-stock" class="form-control">
+              <option value="true">Còn hàng (Đang mở bán)</option>
+              <option value="false">Tạm hết hàng (Ẩn đặt hàng)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="form-is-active">Hiển thị trên Website</label>
+            <select id="form-is-active" class="form-control">
+              <option value="true">Hiển thị (Khách nhìn thấy)</option>
+              <option value="false">Tạm ẩn món (Khách không thấy)</option>
+            </select>
+          </div>
+        </div>
+
+      </form>
+
+      <div class="modal-footer">
+        <button id="btn-cancel-product-modal" type="button" class="btn-secondary">Hủy bỏ</button>
+        <button id="btn-save-product" type="submit" form="product-form" class="btn-primary">
+          <i class="fa-solid fa-check"></i>
+          <span>Lưu Sản Phẩm</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       4. MODAL XÁC NHẬN XÓA MÓN
+       ========================================== -->
+  <div id="delete-confirm-modal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 420px; text-align: center;">
+      <div style="padding: 32px 24px 20px;">
+        <div style="width: 54px; height: 54px; border-radius: 50%; background: var(--accent-light); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 16px;">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <h3 style="font-size: 17px; font-weight: 800; color: var(--gray-900); margin-bottom: 8px;">Xác nhận xóa món này?</h3>
+        <p style="font-size: 13.5px; color: var(--gray-600); line-height: 1.5;">
+          Bạn có chắc chắn muốn xóa món <strong id="delete-item-name" style="color: var(--gray-900);"></strong>? Hành động này sẽ cập nhật ngay lập tức ngoài trang chủ.
+        </p>
+      </div>
+      <div class="modal-footer" style="justify-content: center;">
+        <button id="btn-cancel-delete" class="btn-secondary">Không xóa</button>
+        <button id="btn-confirm-delete" class="btn-primary" style="background: var(--accent);">Đồng ý xóa</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       5. MODAL CÀI ĐẶT THÔNG TIN CỬA HÀNG
+       ========================================== -->
+  <div id="shop-settings-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Cài Đặt Thông Tin Cửa Hàng</h3>
+        <button id="btn-close-shop-settings" class="btn-close-modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="shop-settings-form" class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="shop-name-input">Tên thương hiệu / Cửa hàng <span class="req">*</span></label>
+            <input type="text" id="shop-name-input" class="form-control" placeholder="Bếp Nhà Làm" required>
+          </div>
+
+          <div class="form-group">
+            <label for="shop-slogan-input">Khẩu hiệu / Slogan phụ đề</label>
+            <input type="text" id="shop-slogan-input" class="form-control" placeholder="Giò Chả & Thịt Sạch Gia Truyền">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="shop-announcement-input">Thông báo ưu đãi trên cùng (Announcement)</label>
+            <input type="text" id="shop-announcement-input" class="form-control" placeholder="CAM KẾT 3 KHÔNG: Không hàn the • Không chất bảo quản • Không pha bột">
+          </div>
+
+          <div class="form-group">
+            <label for="shop-badge-input">Huy hiệu ưu đãi ngắn (Badge)</label>
+            <input type="text" id="shop-badge-input" class="form-control" placeholder="Freeship nội thành từ 3kg">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="shop-hotline-input">Số Hotline hiển thị <span class="req">*</span></label>
+            <input type="text" id="shop-hotline-input" class="form-control" placeholder="0988.123.456" required>
+          </div>
+
+          <div class="form-group">
+            <label for="shop-hotline-raw-input">Số Hotline bấm gọi (Viết liền) <span class="req">*</span></label>
+            <input type="text" id="shop-hotline-raw-input" class="form-control" placeholder="0988123456" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="shop-zalo-input">Số điện thoại Zalo chốt đơn <span class="req">*</span></label>
+            <input type="text" id="shop-zalo-input" class="form-control" placeholder="0988123456" required>
+          </div>
+
+          <div class="form-group">
+            <label for="shop-facebook-input">Link Fanpage Facebook</label>
+            <input type="url" id="shop-facebook-input" class="form-control" placeholder="https://facebook.com/bepnhalam">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="shop-address-input">Địa chỉ lò làm / cửa hàng <span class="req">*</span></label>
+            <input type="text" id="shop-address-input" class="form-control" placeholder="Số 18, Ngõ 68 Làng Nghề Giò Chả, TP. Hà Nội" required>
+          </div>
+
+          <div class="form-group">
+            <label for="shop-hours-input">Giờ phục vụ / Mở cửa</label>
+            <input type="text" id="shop-hours-input" class="form-control" placeholder="06:00 - 19:00 (Mẻ mới ra lò lúc 6h sáng)">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="shop-map-input">Link Google Maps / Bản đồ vị trí</label>
+          <input type="text" id="shop-map-input" class="form-control" placeholder="Dán link Google Maps hoặc mã nhúng iframe (VD: https://maps.google.com/?q=...)">
+          <small style="color: var(--gray-600); font-size: 11.5px; margin-top: 4px; display: block; line-height: 1.4;">
+            📍 <strong>Mẹo hiện ghim đỏ chuẩn 100%:</strong> Mở Google Maps tìm quán của bạn &rarr; Bấm <strong>Chia sẻ</strong> &rarr; Chọn tab <strong>Nhúng bản đồ</strong> &rarr; Bấm <strong>Sao chép HTML</strong> rồi dán vào đây (hoặc dán link toạ độ <code>@lat,lng</code>).
+          </small>
+          <div id="admin-map-preview-wrap" style="margin-top: 10px; border-radius: 8px; overflow: hidden; border: 1px solid var(--gray-200); display: none;">
+            <div style="background: var(--gray-100); padding: 6px 12px; font-size: 11.5px; font-weight: 700; color: var(--gray-700); border-bottom: 1px solid var(--gray-200); display: flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-map-pin" style="color: var(--accent);"></i> Xem trước bản đồ ghim vị trí:
+            </div>
+            <iframe id="admin-map-preview-iframe" width="100%" height="220" style="border: 0;" src="" loading="lazy"></iframe>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="shop-ship-input">Chính sách / Ghi chú giao hàng</label>
+          <textarea id="shop-ship-input" class="form-control" rows="2" placeholder="Freeship nội thành từ 3kg. Nhận ship tỉnh đóng thùng xốp hút chân không..."></textarea>
+        </div>
+
+        <!-- CHẾ ĐỘ BẢO TRÌ / TẠM NGƯNG PHỤC VỤ (MAINTENANCE MODE) -->
+        <div class="maintenance-config-box">
+          <div class="maintenance-header-row">
+            <div class="maintenance-title-group">
+              <div class="maintenance-icon-wrap">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+              </div>
+              <div>
+                <strong style="color: #b45309; font-size: 14px;">Chế Độ Bảo Trì (Tạm Đóng Website Khách)</strong>
+                <div style="font-size: 12px; color: var(--gray-600); margin-top: 2px;">
+                  Khi bật, toàn bộ khách truy cập sẽ thấy màn hình thông báo tạm ngưng và nút gọi Hotline/Zalo khẩn cấp. Trang Admin vẫn hoạt động bình thường.
+                </div>
+              </div>
+            </div>
+            <label class="switch-toggle" title="Gạt để Bật / Tắt chế độ bảo trì">
+              <input type="checkbox" id="shop-maintenance-toggle">
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+
+          <div id="maintenance-fields-wrap" style="display: none; margin-top: 14px; padding-top: 12px; border-top: 1px dashed #fcd34d;">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="shop-maintenance-title">Tiêu đề thông báo</label>
+                <input type="text" id="shop-maintenance-title" class="form-control" placeholder="Bếp Đang Tạm Nghỉ Nâng Cấp">
+              </div>
+              <div class="form-group">
+                <label for="shop-maintenance-expected">Thời gian mở lại dự kiến</label>
+                <input type="text" id="shop-maintenance-expected" class="form-control" placeholder="Dự kiến mở bán lại: 08:00 sáng Thứ Hai">
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="shop-maintenance-message">Lời nhắn gửi khách hàng</label>
+              <textarea id="shop-maintenance-message" class="form-control" rows="2" placeholder="Bếp nhà em xin phép tạm ngưng nhận đơn online ít ngày để nâng cấp máy móc và nhập đợt nguyên liệu tươi mới. Kính mong Quý khách thông cảm và quay lại sau!"></textarea>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <div class="modal-footer">
+        <button id="btn-cancel-shop-settings" type="button" class="btn-secondary">Hủy bỏ</button>
+        <button id="btn-save-shop-settings" type="submit" form="shop-settings-form" class="btn-primary">
+          <i class="fa-solid fa-check"></i>
+          <span>Lưu Cài Đặt Shop</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Logic Javascript Dashboard -->
+  <script src="admin.js"></script>
+</body>
+</html>
