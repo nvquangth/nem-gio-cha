@@ -102,7 +102,16 @@ function loginWithGoogle(auth) {
     })
     .catch(error => {
       console.error("Lỗi Google Sign-In:", error);
-      showToast(`Đăng nhập thất bại: ${error.message}`, "error");
+      const code = error.code || "";
+      if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
+        // Người dùng tự đóng popup -> không cần hiện toast
+        return;
+      }
+      if (code === "auth/network-request-failed") {
+        showToast("Không thể kết nối. Vui lòng kiểm tra lại đường truyền mạng và thử lại.", "error");
+      } else {
+        showToast("Đăng nhập không thành công. Vui lòng thử lại sau ít phút.", "error");
+      }
     });
 }
 
@@ -150,15 +159,7 @@ async function verifyAdminAccess(user) {
 // Xử lý khi tài khoản không có quyền Admin
 function handleUnauthorizedUser(email, errorMsg = "") {
   firebase.auth().signOut().then(() => {
-    alert(
-      `⛔ TỪ CHỐI TRUY CẬP!\n\n` +
-      `Email [${email}] chưa được cấp quyền Quản trị viên trên hệ thống.\n\n` +
-      `👉 HƯỚNG DẪN CẤP QUYỀN:\n` +
-      `1. Vào Firebase Console -> Firestore Database.\n` +
-      `2. Vào collection 'admins' -> Bấm 'Add document'.\n` +
-      `3. Đặt Document ID là: ${email}\n` +
-      `4. Bấm Save rồi đăng nhập lại là xong!`
-    );
+    showToast("Tài khoản này chưa được cấp quyền quản trị. Vui lòng liên hệ chủ bếp để được hỗ trợ.", "error");
     showLoginScreen();
   });
 }
@@ -412,7 +413,8 @@ window.toggleProductVisibility = async function(id) {
         "success"
       );
     } catch (e) {
-      showToast(`Lỗi cập nhật: ${e.message}`, "error");
+      console.error("Lỗi cập nhật trạng thái hiển thị:", e);
+      showToast("Không thể cập nhật. Vui lòng kiểm tra kết nối mạng và thử lại.", "error");
     }
   } else {
     // Local / Demo
@@ -444,7 +446,8 @@ window.toggleProductStock = async function(id) {
       });
       showToast(`Đã chuyển '${item.name}' sang: ${newStockStatus ? 'Còn Hàng' : 'Tạm Hết'}`, "success");
     } catch (e) {
-      showToast(`Lỗi cập nhật: ${e.message}`, "error");
+      console.error("Lỗi cập nhật trạng thái kho:", e);
+      showToast("Không thể cập nhật trạng thái. Vui lòng thử lại sau.", "error");
     }
   } else {
     // Local / Demo
@@ -531,9 +534,10 @@ function setupCrudEvents() {
     if (!isDemoMode && firestoreDb) {
       try {
         await firestoreDb.collection("products").doc(currentDeletingId).delete();
-        showToast("Đã xóa món ăn thành công khỏi Firestore!", "success");
+        showToast("Đã xóa món ăn thành công!", "success");
       } catch (e) {
-        showToast(`Lỗi khi xóa: ${e.message}`, "error");
+        console.error("Lỗi khi xóa:", e);
+        showToast("Không thể xóa món này. Vui lòng thử lại sau.", "error");
       }
     } else {
       currentProducts = currentProducts.filter(p => p.id !== currentDeletingId);
@@ -632,8 +636,8 @@ function setupCrudEvents() {
           document.getElementById("form-image-status").innerHTML = `✅ Đã tối ưu ảnh & sẵn sàng lưu trực tiếp vào CSDL!`;
           showToast("Đã tối ưu hoá và lưu ảnh trực tiếp vào CSDL!", "success");
         } else {
-          document.getElementById("form-image-status").textContent = `⚠️ Lỗi upload Storage (${err.message}). Bạn có thể dán link ảnh bên dưới.`;
-          showToast("Chưa thể tải ảnh lên Storage.", "error");
+          document.getElementById("form-image-status").textContent = "⚠️ Không thể tải ảnh lên. Bạn có thể dán link ảnh bên dưới.";
+          showToast("Không thể tải ảnh lên. Vui lòng thử dán link URL ảnh thay thế.", "error");
         }
       }
     }
@@ -684,10 +688,11 @@ function setupCrudEvents() {
     if (!isDemoMode && firestoreDb) {
       try {
         await firestoreDb.collection("products").doc(id).set(productData, { merge: true });
-        showToast("Đã lưu sản phẩm lên Firebase Firestore thành công!", "success");
+        showToast("Đã lưu sản phẩm thành công!", "success");
         closeModal();
       } catch (err) {
-        showToast(`Lỗi khi lưu: ${err.message}`, "error");
+        console.error("Lỗi khi lưu sản phẩm:", err);
+        showToast("Không thể lưu sản phẩm. Vui lòng kiểm tra kết nối và thử lại.", "error");
       }
     } else {
       // Local / Demo
@@ -813,7 +818,8 @@ function setupCrudEvents() {
           showToast(newSettings.isMaintenance ? "Đã BẬT Chế độ bảo trì cho website!" : "Đã cập nhật thông tin cửa hàng thành công!", "success");
           closeShopSettings();
         } catch (err) {
-          showToast(`Lỗi khi lưu cài đặt: ${err.message}`, "error");
+          console.error("Lỗi khi lưu cài đặt shop:", err);
+          showToast("Không thể lưu cài đặt. Vui lòng kiểm tra kết nối và thử lại.", "error");
         }
       } else {
         currentShopConfig = { ...currentShopConfig, ...newSettings };
