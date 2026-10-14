@@ -53,16 +53,19 @@ function initAdminApp() {
     // Chưa cấu hình Firebase: hiển thị banner cảnh báo
     updateStatusBanner(false);
 
-    // Nút đăng nhập Google khi chưa có Firebase -> gợi ý xem demo
+    // Nút đăng nhập Google khi chưa có Firebase -> thông báo cấu hình
     document.getElementById("btn-google-login").addEventListener("click", () => {
-      showToast("Bạn chưa cấu hình Firebase trong firebase-config.js. Bấm 'Xem thử giao diện Demo' để trải nghiệm trước nhé!", "warning");
+      showToast("Chưa kết nối được Firebase. Vui lòng kiểm tra lại cấu hình firebase-config.js!", "warning");
     });
   }
 
-  // Nút vào chế độ Demo
-  document.getElementById("btn-enter-demo").addEventListener("click", () => {
-    enterDemoMode();
-  });
+  // Nút vào chế độ Demo (nếu có)
+  const btnEnterDemo = document.getElementById("btn-enter-demo");
+  if (btnEnterDemo) {
+    btnEnterDemo.addEventListener("click", () => {
+      enterDemoMode();
+    });
+  }
 
   // Nút đăng xuất
   document.getElementById("btn-logout").addEventListener("click", () => {
